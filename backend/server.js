@@ -4,8 +4,6 @@ const jwt = require("jsonwebtoken")
 const app = express()
 const PORT = 4000;
 
-const blacklist = new Set()
-
 app.use(cors())
 app.use(express.json())
 
