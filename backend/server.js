@@ -44,13 +44,24 @@ app.post("/api/auth/signup", (req, res) => {
         return res.status(401).send("Invalid credentials")
     }
 
-    const query = "INSERT INTO accounts (username, email, password) VALUES (?,?,?)"
-    con.query(query, [username, email, password], (error, result) => {
+    const queryUserExist = "SELECT * FROM accounts WHERE username = ? OR email = ?"
+    con.query(queryUserExist, [username, email], (error, result) => {
         if(error) {
-            console.error("Error during singup: " + error)
+            console.error("Error during query: " + error)
             return res.status(500).send("Internal Server Error")
-        } return res.status(201).send("User registered successfully")
-    }) 
+        }
+        if(result.length > 0) {
+            return res.status(401).send("User already exists")
+        }
+        const query = "INSERT INTO accounts (username, email, password) VALUES (?,?,?)"
+        con.query(query, [username, email, password], (error, result) => {
+            if(error) {
+                console.error("Error during signup: " + error)
+                return res.status(500).send("Internal Server Error")
+            }
+            return res.status(201).send("User registered successfully")
+        })
+    })
 })
 
 app.post("/api/auth/signout", (req, res) => {
