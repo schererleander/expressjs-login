@@ -44,7 +44,7 @@ This project is for development purposes only and has certain security considera
 
 - **Password Storage:** Passwords are stored as plain text in the database.
 - **HTTPS:** For development reasons, this project does not use HTTPS.
-- **Token:** Toke is saved as a cookie.
+- **Token:** Token is saved as a cookie.
 
 ## References:
 
@@ -54,4 +54,4 @@ This project is for development purposes only and has certain security considera
 
 [ExpressJS Basich routing](https://expressjs.com/en/starter/basic-routing.html)
 
-[express-session](https://expressjs.com/en/resources/middleware/session.html)
+[Getting started with JSON Web Tokens](https://auth0.com/learn/json-web-tokens)
