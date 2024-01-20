@@ -4,11 +4,13 @@ const jwt = require("jsonwebtoken")
 const app = express()
 const PORT = 4000;
 
+const blacklist = new Set()
+
 app.use(cors())
 app.use(express.json())
 
-const mysql = require("mysql2")
-const con = mysql.createConnection({
+const mysql = require("mysql2/promise")
+const con = mysql.createPool({
     host: "localhost",
     port: 3306,
     user: "root",
@@ -16,122 +18,124 @@ const con = mysql.createConnection({
     database: "react-login"
 })
 
-app.post("/api/auth/signin", (req, res) => {
-    const { username, password} = req.body
-    if(!username || !password) {
-        console.debug("Login received empty")
-        return res.status(500).send("Internal Server Error")
-    }
-    
-    const query = "SELECT * FROM accounts WHERE username = ? AND password = ?"
-    con.query(query, [ username, password], (error, result) => {
-        if(error) {
-            console.error("Error during login: " + error)
-            return res.status(500).send("Internal Server Error")
+app.post("/api/auth/signin", async (req, res) => {
+    try {
+        const { username, password} = req.body
+        if(!username || !password) {
+            return res.status(401).send("Empty credentials")
         }
-
-        if(result.length > 0) {
+        const [existingUsers] = await con.query(
+            "SELECT * FROM accounts WHERE username = ? AND password = ?" ,
+            [username, password]
+        )
+        if(existingUsers.length > 0) {
             const token = jwt.sign({username}, "never knows best", {expiresIn: "1h"})
             return res.status(201).json({token})
-        } else return res.status(401).send("No user found")
-    })
+        } else {
+            return res.status(401).send("User not found")
+        }
+    } catch(error) {
+        console.error("Error during login: " + error)
+        res.status(500).send("Internal Server Error")
+    }
 })
 
-app.post("/api/auth/signup", (req, res) => {
-    const { username, email, password} = req.body
+app.post("/api/auth/signup", async (req, res) => {
+    try {
+        const { username, email, password} = req.body
 
-    if(!username || !password || !email) {
-        return res.status(401).send("Invalid credentials")
-    }
-
-    const queryUserExist = "SELECT * FROM accounts WHERE username = ? OR email = ?"
-    con.query(queryUserExist, [username, email], (error, result) => {
-        if(error) {
-            console.error("Error during query: " + error)
-            return res.status(500).send("Internal Server Error")
+        if(!username || !password || !email) {
+            return res.status(401).send("Invalid credentials")
         }
-        if(result.length > 0) {
+
+        const [existingUsers] = await con.query(
+            "SELECT * FROM accounts WHERE username = ? OR email = ?",
+            [username, email]
+        )
+
+        if(existingUsers.length > 0) {
             return res.status(401).send("User already exists")
         }
-        const query = "INSERT INTO accounts (username, email, password) VALUES (?,?,?)"
-        con.query(query, [username, email, password], (error, result) => {
-            if(error) {
-                console.error("Error during signup: " + error)
-                return res.status(500).send("Internal Server Error")
-            }
-            return res.status(201).send("User registered successfully")
-        })
-    })
+
+        await con.query(
+            "INSERT INTO accounts (username, email, password) VALUES(?,?,?)",
+            [username, email, password]
+        )
+        
+        return res.status(201).send("User registered successfully")
+    } catch(error) {
+        console.error("Error during singup: " + error)
+        return res.status(500).send("Internal Server Error")
+    }
 })
 
-app.post("/api/auth/signout", (req, res) => {
-    // Add the token to the blacklist
-    const token = req.headers.authorization.split(" ")[1]
-    blacklist.add(token)
-
-    return res.status(200).clearCookie("token").send("User signed out successfully")
+app.post("/api/auth/signout", async (req, res) => {
+    try {
+        if(!req.headers.authorization) {
+            return res.status(401).send("No authentication")
+        }
+        res.status(201).clearCookie("token").send("User signed out successfully")
+    } catch(error) {
+        console.error("Error during signout:" + error)
+        return res.status(500).send("Internal Server Error")
+    }
 })
 
+app.get("/api/auth/session", async (req, res) => { 
 
-app.get("/api/auth/session", (req, res) => { 
-    if(!req.headers.authorization) {
-        return res.status(401).send("Not logged in or login expired")
-    }
+    try {
+        if(!req.headers.authorization) {
+            return res.status(401).send("No authentication")
+        }
 
-    const token = req.headers.authorization.split(" ")[1];
-    const decodedToken = jwt.verify(token, "never knows best")
-    if(decodedToken) {
+        const decodedToken = jwt.verify(req.headers.authorization.split(" ")[1], "never knows best")
+
+        if(!decodedToken) {
+            return res.status(401).send("Invalid token")
+        }
+
         const {username} = decodedToken
-        const query = "SELECT username, email, profileImage FROM accounts WHERE username = ?"
-        con.query(query, [username], (error, result) => {
-            if(error) {
-                console.error("Erro during session. retrieval: "  + error)
-                return res.status(500).send("Internal Server erro")
-            }
+        const [userData] = await con.query(
+            "SELECT username, email, profileImage FROM accounts WHERE username = ?",
+            [username]
+        )
 
-            if(result.length > 0) {
-                const { username, email, profileImage } = result[0]
-                const userData = { username, email, profileImage}
-                return res.json(userData)
-            } else return res.status(401).send("User not found")
-        })
-    } else {
-        return res.status(401).send("Invalid token")
+        if(userData.length > 0) {
+            const {username, email, profileImage} = userData[0]
+            return res.json({username, email, profileImage})
+        } else {
+            return res.status(401).send("User not found")
+        }
+    } catch(error) {
+        console.error("Error during session retrieval " + error)
+        return res.status(500).send("Internal Server Error")
     }
-});
+})
 
-app.post("/api/auth/changeProfileImage", (req, res) => { 
-    if(!req.headers.authorization) {
-        return res.status(401).send("Not logged in or login expired")
-    }
+app.post("/api/auth/changeProfileImage", async (req, res) => {
+    try {
+        if(!req.headers.authorization) {
+            return res.status(401).send("No authentication")
+        }
 
-    const token = req.headers.authorization.split(" ")[1];
-    const decodedToken = jwt.verify(token, "never knows best")
-    if(decodedToken) {
+        const decodedToken = jwt.verify(req.headers.authorization.split(" ")[1], "never knows best")
+        if (!decodedToken) {
+            return res.status(401).send("Invalid token")
+        }
+
         const {username} = decodedToken
-        const query = "SELECT username, email, profileImage FROM accounts WHERE username = ?"
-        con.query(query, [username], (error, result) => {
-            if(error) {
-                console.error("Error during session. retrieval: "  + error)
-                return res.status(500).send("Internal Server erro")
-            }
+        const url = req.body.imageUrl
+        await con.query(
+            "UPDATE accounts SET profileImage = ? WHERE username = ?",
+            [url, username]
+        )
 
-            if(result.length > 0) {
-                const url = req.body.imageUrl
-                const queryChangeImage = "UPDATE accounts SET profileImage = ? WHERE username = ?"
-                con.query(queryChangeImage, [url, username], (error, result) => {
-                    if(error) {
-                        console.debug("Error during profileImage change:" + error)
-                        return res.status(500).send("Internal Server Error")
-                    }
-                    return res.status(201).send("Profile image changed")
-                })
-            } else return res.status(401).send("User not found")
-        })
-    } else {
-        return res.status(401).send("Invalid token")
+        return res.status(201).send("Profile image changed")  
+    } catch(error) {
+        console.error("Erro during profile image change: " + error)
+        return res.status(500).send("Internal Server Error")
     }
-});
+})
 
 app.listen(PORT, () => {
     console.debug("Server started at http://localhost:" + PORT)
