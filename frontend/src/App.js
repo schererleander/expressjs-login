@@ -51,14 +51,14 @@ function App() {
       <nav className="bg-gray-800 p-4 text-white">
         <div className="container mx-auto">
           <span className="text-lg font-bold">react-login</span>
-          <button
+          {loggedIn ? (null) : (<button
             onClick={() => setRegistrationMode(true)}
             className="ml-4 text-white hover:font-semibold hover:underline"
-          >Register</button>
-          <button
+          >Register</button>)}
+          {loggedIn ? (<button
             onClick={() => setSettingsMode(true)}
             className="ml-4 text-white hover:font-semibold hover:underline"
-          >Settings</button>
+          >Settings</button>): null}
         </div>
       </nav>
       <div className="w-full h-full flex justify-center items-center">
