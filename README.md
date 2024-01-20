@@ -1,4 +1,4 @@
-# react-login
+# expressjs-login
 
 ![](./.assets/home.png)
 
@@ -8,8 +8,8 @@ This project is a simple web application built with React for the frontend and E
 1. **Clone the repository:**
 
     ```bash
-    git clone https://github.com/schererleander/react-login.git
-    cd react-login
+    git clone https://github.com/schererleander/expressjs-login.git
+    cd expressjs-login
     ```
 
 2. **Install dependencies for both frontend and backend:**
