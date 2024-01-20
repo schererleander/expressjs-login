@@ -4,11 +4,25 @@ import './App.css';
 import Home from "./home"
 import Login from "./login"
 import Register from "./register"
+import Settings from './settings';
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [registrationMode, setRegistrationMode] = useState(false)
+  const [settingsMode, setSettingsMode] = useState(false)
 
+  function displayComponent() {
+    if(registrationMode) {
+      return <Register />
+    }
+    if(settingsMode) {
+      return <Settings />
+    }
+    if(loggedIn) {
+      return <Home />
+    }
+    return <Login />
+  }
 
   useEffect(() => {
     const token = Cookies.get('token');
@@ -18,7 +32,12 @@ function App() {
             Authorization: "Bearer " + token,
         },
       })
-      .then((response) => response.json())
+      .then((response) => {
+        if(!response.ok) {
+          return
+        }
+        return response.json()
+      })
       .then((data) => {
         if (data) {
           setLoggedIn(true)
@@ -36,14 +55,15 @@ function App() {
             onClick={() => setRegistrationMode(true)}
             className="ml-4 text-white hover:font-semibold hover:underline"
           >Register</button>
+          <button
+            onClick={() => setSettingsMode(true)}
+            className="ml-4 text-white hover:font-semibold hover:underline"
+          >Settings</button>
         </div>
       </nav>
       <div className="w-full h-full flex justify-center items-center">
         <div className="w-1/2 max-w-60 h-1/2 p-4 bg-gray-200 rounded-md">
-        {registrationMode ? (
-          <Register />
-        ) : (loggedIn ? <Home /> : <Login />
-        )}
+        {displayComponent()}
         </div>
       </div>
     </>

@@ -100,6 +100,39 @@ app.get("/api/auth/session", (req, res) => {
     }
 });
 
+app.post("/api/auth/changeProfileImage", (req, res) => { 
+    if(!req.headers.authorization) {
+        return res.status(401).send("Not logged in or login expired")
+    }
+
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, "never knows best")
+    if(decodedToken) {
+        const {username} = decodedToken
+        const query = "SELECT username, email, profileImage FROM accounts WHERE username = ?"
+        con.query(query, [username], (error, result) => {
+            if(error) {
+                console.error("Error during session. retrieval: "  + error)
+                return res.status(500).send("Internal Server erro")
+            }
+
+            if(result.length > 0) {
+                const url = req.body.imageUrl
+                const queryChangeImage = "UPDATE accounts SET profileImage = ? WHERE username = ?"
+                con.query(queryChangeImage, [url, username], (error, result) => {
+                    if(error) {
+                        console.debug("Error during profileImage change:" + error)
+                        return res.status(500).send("Internal Server Error")
+                    }
+                    return res.status(201).send("Profile image changed")
+                })
+            } else return res.status(401).send("User not found")
+        })
+    } else {
+        return res.status(401).send("Invalid token")
+    }
+});
+
 app.listen(PORT, () => {
     console.debug("Server started at http://localhost:" + PORT)
 })
