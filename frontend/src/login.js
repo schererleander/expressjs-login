@@ -1,48 +1,55 @@
 import React from "react";
 import { useState } from "react";
+import Cookies from 'js-cookie';
 
 function Login() {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [status, setStatus] = useState("")
 
     function onButtonClick() {
-        fetch("/api/auth/login", {
+        fetch("http://localhost:4000/api/auth/signin", {
             method:"POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ username, password})
+            body: JSON.stringify({ username, password })
+        }).then((response) => {
+            if(!response.ok) {
+                setStatus("Login failed")
+            }
+            return response.json()
         })
+        .then((data) => {
+            Cookies.set('token', data.token);    
+            window.location.reload()
+        })
+        .catch(error => console.error(error.message))
     }
+    
 
-    return (
-        <div className="w-full h-full">
-            <div className="w-1/2 h-1/2">
-            <h1 className="text-gray-600 text-sm font-mono">
-                Username
-            </h1>
+    return(
+        <>
+            <h1 className="text-xl font-sans font-semibold">Login</h1>
             <input
-                type="text"
-                placeholder="Enter your username"
-                onChange={(e) => setUsername(e.target.value)}
-                className="p-2 bg-gray-400 border border-gray-500 text-gray-500"
+            type="text"
+            placeholder="Username"
+            onChange={(e) => setUsername(e.target.value)}
+            className="p-1 my-1 block rounded-md"
             />
-            <h1 className="text-gray-600 text-sm font-mono">
-                Password
-            </h1>
             <input
-                type="password"
-                placeholder="Enter your password"
-                onChange={(e) => setPassword(e.target.value)}
-                className="p-2 bg-gray-400 border border-gray-500 text-gray-500"
+            type="password"
+            placeholder="Password"
+            onChange={(e) => setPassword(e.target.value)}
+            className="p-1 my-1 block rounded-md"
             />
-            <input 
-                type="submit"
-                value="Login"
-                onClick={onButtonClick}
-                className="p-2 bg-blue-600 hover:bg-blue-400 text-white font-sans"
-            />
-            </div>
-        </div>
+            {status ? <p className="text-sm text-red-500 font-sans font-semibold m-y1">{status}</p> : null}
+            <button
+            onClick={onButtonClick}
+            className="p-1 my-1 block rounded-md bg-blue-600 text-white"
+            >Login</button>
+        </>
     )
 }
+
+export default Login
