@@ -43,8 +43,7 @@ This project is a simple web application built with React for the frontend and E
 This project is for development purposes only and has certain security considerations:
 
 - **Password Storage:** Passwords are stored as plain text in the database.
-- **HTTPS:** For development reasons, this project does not use HTTPS.
-- **Token:** Token is saved as a cookie.
+- **Session-Token:** The Session-Token is stored as a cookie, which can be prone to cookie grabbing.
 
 ## References:
 
