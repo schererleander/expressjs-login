@@ -1,6 +1,6 @@
 # expressjs-login
 
-![](./.assets/home.png)
+![screenshot](screenshot.png)
 
 This project is a simple web application built with React for the frontend and Express for the backend, providing user authentication and profile information retrieval. The backend utilizes JSON Web Tokens (JWT) for session handling, and MySQL is used as the database to store user account information.
 
